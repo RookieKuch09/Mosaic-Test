@@ -3,6 +3,22 @@
 
 #include <mosaic/api/main.hpp>
 
+struct Component
+{
+    int a;
+    int b;
+};
+
+void System(Mosaic::Resources& resources)
+{
+    auto method = [&resources](Mosaic::ECS::Entity entity, Component& component)
+    {
+        resources.Console.Log<Mosaic::Debug::Console::LogSeverity::Success>("Result of adding Component values 'a' and 'b' on entity {}: {}", entity.ID, component.a + component.b);
+    };
+
+    resources.ECSManager.ForEach<Component>(method);
+}
+
 class MosaicTest : public Mosaic::Application
 {
 public:
@@ -13,12 +29,20 @@ public:
 
     void Setup() override
     {
-        auto outputID = ApplicationResources.Console.CreateFileOutput("logs.txt");
-        auto outputID2 = ApplicationResources.Console.CreateFileOutput("logs.txt");
+        auto& resources = GetApplicationResources();
 
-        ApplicationResources.Console.Log<Mosaic::Console::LogSeverity::Success>(ApplicationResources.Console.TerminalOutputID, "Hello from Mosaic!");
+        auto& console = resources.Console;
+        auto& ecsManager = resources.ECSManager;
 
-        ApplicationResources.Console.Log<Mosaic::Console::LogSeverity::Success>(outputID2, "Hello from Mosaic, but in a log file!");
+        ecsManager.AddSystem(System);
+
+        Mosaic::ECS::Entity entity0 = ecsManager.CreateEntity();
+        Mosaic::ECS::Entity entity1 = ecsManager.CreateEntity();
+
+        ecsManager.AddComponent<Component>(entity0, Component{.a = 7, .b = 9});
+        ecsManager.AddComponent<Component>(entity1, Component{.a = 3, .b = 2});
+
+        console.Log<Mosaic::Debug::Console::LogSeverity::Success>("Hello from Mosaic!");
     }
 };
 
