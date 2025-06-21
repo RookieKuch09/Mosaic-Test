@@ -3,7 +3,7 @@
 
 #include <mosaic/ecs/view.hpp>
 
-#include <mosaic/api/main.hpp>
+#include <mosaic/macros/main.hpp>
 
 struct Health
 {
@@ -38,7 +38,7 @@ struct DamageEvent
     float Amount;
 };
 
-void OnDamage(Mosaic::Resources& resources, const DamageEvent& event, Mosaic::ECSView<Health> view)
+void OnDamage(Mosaic::ApplicationResources& resources, const DamageEvent& event, Mosaic::ECSView<Health> view)
 {
     auto& console = resources.Console;
 
@@ -53,7 +53,7 @@ void OnDamage(Mosaic::Resources& resources, const DamageEvent& event, Mosaic::EC
     }
 }
 
-void AttackSystem(Mosaic::Resources& resources)
+void AttackSystem(Mosaic::ApplicationResources& resources)
 {
     auto& ecsManager = resources.ECSManager;
     auto& eventManager = resources.EventManager;
@@ -73,9 +73,7 @@ void AttackSystem(Mosaic::Resources& resources)
         {
             if (targetEntity != attackerEntity)
             {
-                DamageEvent damageEvent{targetEntity, weapon.Damage};
-
-                eventManager.Emit(damageEvent);
+                eventManager.Emit<DamageEvent>(targetEntity, weapon.Damage);
 
                 console.Log<Mosaic::Console::LogSeverity::Notice>("Entity {} attacks entity {} for {} damage", attackerEntity.ID, targetEntity.ID, weapon.Damage);
             }
@@ -83,7 +81,7 @@ void AttackSystem(Mosaic::Resources& resources)
     }
 }
 
-void TimeSystem(Mosaic::Resources& resources)
+void TimeSystem(Mosaic::ApplicationResources& resources)
 {
     auto& ecsManager = resources.ECSManager;
     auto& eventManager = resources.EventManager;
@@ -93,23 +91,16 @@ void TimeSystem(Mosaic::Resources& resources)
 
     for (auto [entity, time] : timeView)
     {
-        if (time.Steps > time.Max)
-        {
-            eventManager.Emit(Mosaic::ApplicationExitEvent(0));
-        }
-        else
-        {
-            console.Log<Mosaic::Console::LogSeverity::Notice>("Iteration number: {}", time.Steps);
+        console.Log<Mosaic::Console::LogSeverity::Notice>("Iteration number: {}", time.Steps);
 
-            time.Steps++;
-        }
+        time.Steps++;
     }
 }
 
 class MosaicTest : public Mosaic::Application
 {
 public:
-    MosaicTest(Mosaic::Resources& resources)
+    MosaicTest(Mosaic::ApplicationResources& resources)
         : Application(resources)
     {
     }
