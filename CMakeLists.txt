@@ -7,6 +7,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(Mosaic CONFIG REQUIRED)
 
+find_package(GLEW REQUIRED)
+find_package(OpenGL REQUIRED)
+
 file(GLOB_RECURSE SOURCES "source/*.cpp")
 
 add_executable(mosaic-test ${SOURCES})
