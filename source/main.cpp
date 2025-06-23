@@ -1,26 +1,40 @@
 #include <Mosaic/Mosaic.hpp>
 
-struct Time
-{
-    float Value;
-};
-
 void System(Mosaic::InstanceResources& instanceResources)
 {
     auto& eventManager = instanceResources.EventManager;
     auto& ecs = instanceResources.ECSManager;
+    auto& console = instanceResources.Console;
 
-    auto view = ecs.QueryView<Time>();
+    auto view = ecs.QueryView<Mosaic::WindowStateComponent>();
 
     glm::fvec4 colour;
 
-    for (auto [entity, component] : view)
+    for (auto [entity, windowState] : view)
     {
-        component.Value += 0.001;
+        float px = windowState.Position.x;
+        float py = windowState.Position.y;
 
-        colour.r = -std::sin(component.Value);
-        colour.g = std::cos(component.Value);
-        colour.b = std::sin(component.Value);
+        float length = std::sqrt(px * px + py * py);
+
+        // console.Log<Mosaic::Console::LogSeverity::Notice>("Position: {}, {}", px, py);
+
+        if (length == 0.0)
+        {
+            colour.r = 0.0;
+            colour.g = 0.0;
+
+            // console.Log<Mosaic::Console::LogSeverity::Notice>("Colour: {}, {}", colour.r, colour.g);
+        }
+        else
+        {
+            colour.r = px / length;
+            colour.g = py / length;
+
+            // console.Log<Mosaic::Console::LogSeverity::Notice>("Colour: {}, {}", colour.r, colour.g);
+        }
+
+        colour.b = 0.0;
         colour.a = 1.0;
     }
 
@@ -33,12 +47,13 @@ public:
     void Setup(Mosaic::InstanceResources& instanceResources) override
     {
         auto& ecs = instanceResources.ECSManager;
+        auto& console = instanceResources.Console;
 
         auto entity = ecs.CreateEntity();
 
         ecs.AddSystem(System);
 
-        ecs.AddComponent<Time>(entity);
+        ecs.AddComponent<Mosaic::WindowStateComponent>(entity);
     }
 };
 
