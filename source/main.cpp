@@ -1,82 +1,61 @@
 #include <Mosaic/Mosaic.hpp>
 
-enum class VertexSemantic
+#include <Mosaic/Rendering/Mesh/Attributes.hpp>
+#include <Mosaic/Rendering/Mesh/Descriptor.hpp>
+#include <Mosaic/Rendering/Mesh/Resource.hpp>
+
+enum class QuadMeshSemantic
 {
     Position,
     Colour,
 };
 
-using VertexDescriptor = Mosaic::MeshDescriptor<
-    Mosaic::MeshAttribute<VertexSemantic::Position, glm::fvec3, 1>,
-    Mosaic::MeshAttribute<VertexSemantic::Colour, glm::fvec4, 1>>;
+using QuadMeshPositionAttribute = Mosaic::MeshAttribute<QuadMeshSemantic::Position, glm::fvec3>;
+using QuadMeshColourAttribute = Mosaic::MeshAttribute<QuadMeshSemantic::Colour, glm::fvec4>;
 
-void System(Mosaic::InstanceResources& instanceResources)
-{
-    auto& eventManager = instanceResources.EventManager;
-    auto& ecs = instanceResources.ECSManager;
-    auto& console = instanceResources.Console;
+using QuadMeshAttributePack = Mosaic::MeshAttributePack<QuadMeshPositionAttribute, QuadMeshColourAttribute>;
+using QuadMeshFlags = Mosaic::MeshFlags<Mosaic::MeshPrimitive::Triangles, Mosaic::MeshIndexing::U32>;
 
-    auto view = ecs.QueryView<Mosaic::WindowStateComponent>();
-
-    glm::fvec4 colour;
-
-    for (auto [entity, windowState] : view)
-    {
-        float px = windowState.Position.x;
-        float py = windowState.Position.y;
-
-        float length = std::sqrt(px * px + py * py);
-
-        if (length == 0.0)
-        {
-            colour.r = 0.0;
-            colour.g = 0.0;
-        }
-        else
-        {
-            colour.r = px / length;
-            colour.g = py / length;
-        }
-
-        colour.b = 0.0;
-        colour.a = 1.0;
-    }
-}
+using QuadMeshDescriptor = Mosaic::MeshDescriptor<QuadMeshAttributePack, QuadMeshFlags>;
 
 class MosaicTest : public Mosaic::Application
 {
 public:
     void Setup(Mosaic::InstanceResources& instanceResources) override
     {
-        auto& ecs = instanceResources.ECSManager;
         auto& console = instanceResources.Console;
+        auto& renderer = instanceResources.Renderer;
 
-        auto entity = ecs.CreateEntity();
+        auto& entityManager = instanceResources.EntityManager;
+        auto& meshManager = instanceResources.MeshManager;
 
-        ecs.AddSystem(System);
-
-        ecs.AddComponent<Mosaic::WindowStateComponent>(entity);
-
-        Mosaic::Mesh<VertexDescriptor> mesh0;
-
-        Mosaic::MeshSemanticData<VertexSemantic::Position, glm::fvec3, 4> positions;
-        Mosaic::MeshSemanticData<VertexSemantic::Colour, glm::fvec4, 4> colours;
-
-        positions.Data = {
-            glm::fvec3{0.5, 0.5, 0.0},
-            glm::fvec3{-0.5, 0.5, 0.0},
-            glm::fvec3{-0.5, -0.5, 0.0},
-            glm::fvec3{0.5, -0.5, 0.0},
+        // Fixed means this is static data (not heap allocated)
+        Mosaic::MeshAttributeDataFixed<QuadMeshSemantic::Position, glm::fvec3, 4> quadPositions = {
+            {0.5, 0.5},
+            {-0.5, 0.5},
+            {-0.5, -0.5},
+            {0.5, -0.5},
         };
 
-        colours.Data = {
-            glm::fvec4{1.0, 0.0, 0.0, 1.0},
-            glm::fvec4{0.0, 1.0, 0.0, 1.0},
-            glm::fvec4{0.0, 0.0, 1.0, 1.0},
-            glm::fvec4{0.0, 0.0, 0.0, 1.0},
+        // Fixed means this is static data (not heap allocated)
+        Mosaic::MeshAttributeDataFixed<QuadMeshSemantic::Colour, glm::fvec4, 4> quadColours = {
+            {1.0, 0.0, 0.0, 1.0},
+            {0.0, 1.0, 0.0, 1.0},
+            {0.0, 0.0, 1.0, 1.0},
+            {0.0, 0.0, 0.0, 1.0},
         };
 
-        mesh0.SetMeshData(positions, colours);
+        Mosaic::MeshIndexingDataFixed<glm::uvec3, 2> quadIndices = {
+            {0, 1, 2},
+            {0, 2, 3},
+        };
+
+        auto reflect = QuadMeshDescriptor::Reflect();
+
+        auto meshHandle = meshManager.CreateMesh<QuadMeshDescriptor>(quadIndices, quadPositions, quadColours); // user must track meshHandle, otherwise it'll go unused forever (intentional). initial data must be provided now but can be changed later. indices are optional based on if they were specified in the descriptor
+
+        auto entityHandle = entityManager.CreateEntity<Mosaic::MeshComponent>(meshHandle);      // this entity now references the mesh
+        auto otherEntityHandle = entityManager.CreateEntity<Mosaic::MeshComponent>(meshHandle); // this entity now also references the mesh (dont know why you would need to do this but you can)
     }
 };
 
